@@ -1,0 +1,19 @@
+{
+  "name": "SignalX",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "SignalX": {
+        "$path": "src"
+      }
+    },
+    "ServerScriptService": {
+      "SignalXExamples": {
+        "$path": "examples"
+      },
+      "SignalXTests": {
+        "$path": "test"
+      }
+    }
+  }
+}

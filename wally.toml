@@ -1,0 +1,10 @@
+[package]
+name = "signalx/signalx"
+description = "SignalX is a structured, memory-safe Roblox event and messaging system."
+version = "0.1.0"
+license = "MIT"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+authors = ["SignalX Contributors"]
+
+[dependencies]
