@@ -5,6 +5,24 @@ local Signal = require(ReplicatedStorage.SignalX)
 
 local LISTENER_COUNT = 1000
 local FIRE_COUNT = 5000
+local EXPECTED_SINK = LISTENER_COUNT * FIRE_COUNT
+local WAIT_TIMEOUT_SECONDS = 10
+
+local function waitForExpectedSink(getSink: () -> number, label: string)
+	local deadline = os.clock() + WAIT_TIMEOUT_SECONDS
+	while getSink() < EXPECTED_SINK and os.clock() < deadline do
+		task.wait()
+	end
+
+	if getSink() < EXPECTED_SINK then
+		warn(string.format(
+			"[Benchmark] %s did not reach expected sink (%d/%d) before timeout",
+			label,
+			getSink(),
+			EXPECTED_SINK
+		))
+	end
+end
 
 local function benchmarkSignalX()
 	local sig = Signal.new({ name = "Benchmark" })
@@ -22,6 +40,10 @@ local function benchmarkSignalX()
 	for _ = 1, FIRE_COUNT do
 		sig:Fire(1)
 	end
+	-- Keep methodology identical for both implementations.
+	waitForExpectedSink(function()
+		return sink
+	end, "SignalX")
 	local fireElapsed = os.clock() - fireStart
 
 	local disconnectStart = os.clock()
@@ -53,6 +75,10 @@ local function benchmarkBindableEvent()
 	for _ = 1, FIRE_COUNT do
 		bindable:Fire(1)
 	end
+	-- Engine signals can be deferred; wait so sink + timing are real.
+	waitForExpectedSink(function()
+		return sink
+	end, "BindableEvent")
 	local fireElapsed = os.clock() - fireStart
 
 	local disconnectStart = os.clock()
