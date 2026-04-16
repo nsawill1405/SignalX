@@ -40,11 +40,14 @@ local function benchmarkSignalX()
 	for _ = 1, FIRE_COUNT do
 		sig:Fire(1)
 	end
+	local fireElapsed = os.clock() - fireStart
+
+	local drainStart = os.clock()
 	-- Keep methodology identical for both implementations.
 	waitForExpectedSink(function()
 		return sink
 	end, "SignalX")
-	local fireElapsed = os.clock() - fireStart
+	local drainElapsed = os.clock() - drainStart
 
 	local disconnectStart = os.clock()
 	sig:DisconnectAll()
@@ -53,6 +56,7 @@ local function benchmarkSignalX()
 	return {
 		connectSeconds = connectElapsed,
 		fireSeconds = fireElapsed,
+		drainSeconds = drainElapsed,
 		disconnectSeconds = disconnectElapsed,
 		sink = sink,
 	}
@@ -75,11 +79,14 @@ local function benchmarkBindableEvent()
 	for _ = 1, FIRE_COUNT do
 		bindable:Fire(1)
 	end
-	-- Engine signals can be deferred; wait so sink + timing are real.
+	local fireElapsed = os.clock() - fireStart
+
+	local drainStart = os.clock()
+	-- Engine signals can be deferred; wait so sink is real.
 	waitForExpectedSink(function()
 		return sink
 	end, "BindableEvent")
-	local fireElapsed = os.clock() - fireStart
+	local drainElapsed = os.clock() - drainStart
 
 	local disconnectStart = os.clock()
 	for _, connection in ipairs(listenerConnections) do
@@ -92,6 +99,7 @@ local function benchmarkBindableEvent()
 	return {
 		connectSeconds = connectElapsed,
 		fireSeconds = fireElapsed,
+		drainSeconds = drainElapsed,
 		disconnectSeconds = disconnectElapsed,
 		sink = sink,
 	}
@@ -101,5 +109,5 @@ local signalXResult = benchmarkSignalX()
 local bindableResult = benchmarkBindableEvent()
 
 print(string.format("[SignalX Benchmark] listeners=%d fires=%d", LISTENER_COUNT, FIRE_COUNT))
-print(string.format("SignalX   connect=%.6fs fire=%.6fs disconnect=%.6fs sink=%d", signalXResult.connectSeconds, signalXResult.fireSeconds, signalXResult.disconnectSeconds, signalXResult.sink))
-print(string.format("Bindable  connect=%.6fs fire=%.6fs disconnect=%.6fs sink=%d", bindableResult.connectSeconds, bindableResult.fireSeconds, bindableResult.disconnectSeconds, bindableResult.sink))
+print(string.format("SignalX   connect=%.6fs fire=%.6fs drain=%.6fs disconnect=%.6fs sink=%d", signalXResult.connectSeconds, signalXResult.fireSeconds, signalXResult.drainSeconds, signalXResult.disconnectSeconds, signalXResult.sink))
+print(string.format("Bindable  connect=%.6fs fire=%.6fs drain=%.6fs disconnect=%.6fs sink=%d", bindableResult.connectSeconds, bindableResult.fireSeconds, bindableResult.drainSeconds, bindableResult.disconnectSeconds, bindableResult.sink))
