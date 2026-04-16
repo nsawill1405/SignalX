@@ -1,3 +1,5 @@
+![SignalX Logo](logo.png)
+
 # SignalX
 
 SignalX is an advanced event and messaging system for Roblox focused on developer experience, memory safety, and production debugging.

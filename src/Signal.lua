@@ -79,6 +79,23 @@ local function formatLocation(connection: ConnectionType): string
 	local source = connection._source
 	local line = connection._line
 
+	-- We only resolve stack info when debug mode is used.
+	if source == nil then
+		local okSource, sourceResult = pcall(debug.info, connection._fn, "s")
+		if okSource and type(sourceResult) == "string" then
+			source = sourceResult
+		else
+			source = "<unknown>"
+		end
+		connection._source = source
+
+		local okLine, lineResult = pcall(debug.info, connection._fn, "l")
+		if okLine and type(lineResult) == "number" then
+			line = lineResult
+			connection._line = lineResult
+		end
+	end
+
 	if source ~= nil and line ~= nil then
 		return string.format("%s:%d", source, line)
 	elseif source ~= nil then
@@ -86,6 +103,24 @@ local function formatLocation(connection: ConnectionType): string
 	end
 
 	return "<unknown>"
+end
+
+-- Fast-path small arg counts to avoid table.unpack in tight loops.
+local function pcallWithPackedArgs(fn: (...any) -> (), packedArgs: any): (boolean, any)
+	local n = packedArgs.n
+	if n == 0 then
+		return pcall(fn)
+	elseif n == 1 then
+		return pcall(fn, packedArgs[1])
+	elseif n == 2 then
+		return pcall(fn, packedArgs[1], packedArgs[2])
+	elseif n == 3 then
+		return pcall(fn, packedArgs[1], packedArgs[2], packedArgs[3])
+	elseif n == 4 then
+		return pcall(fn, packedArgs[1], packedArgs[2], packedArgs[3], packedArgs[4])
+	end
+
+	return pcall(fn, table.unpack(packedArgs, 1, n))
 end
 
 function Signal.new(config: (SignalConfig | string)?): Signal
@@ -159,15 +194,20 @@ function Signal:_sortListenersIfNeeded()
 end
 
 function Signal:_compactListeners()
+	local listeners = self._listeners
 	local compacted = table.create(self._listenerCount)
-	for _, connection in ipairs(self._listeners) do
+	local writeIndex = 0
+
+	for index = 1, #listeners do
+		local connection = listeners[index]
 		if connection._connected then
-			table.insert(compacted, connection)
+			writeIndex += 1
+			compacted[writeIndex] = connection
 		end
 	end
 
 	self._listeners = compacted
-	self._listenerCount = #compacted
+	self._listenerCount = writeIndex
 	self._pendingCompaction = false
 	self:_warnThresholdIfNeeded()
 end
@@ -181,7 +221,7 @@ function Signal:_invokeConnection(connection: ConnectionType, packedArgs: any)
 		connection:Disconnect()
 	end
 
-	local ok, err = pcall(connection._fn, table.unpack(packedArgs, 1, packedArgs.n))
+	local ok, err = pcallWithPackedArgs(connection._fn, packedArgs)
 	if not ok then
 		warn(string.format("[SignalX] Listener error in '%s': %s", self._name, tostring(err)))
 	end
@@ -195,10 +235,11 @@ function Signal:_dispatchListeners(packedArgs: any)
 	end
 
 	self._isFiring = true
-	local stopAt = #self._listeners
+	local listeners = self._listeners
+	local stopAt = #listeners
 
 	for index = 1, stopAt do
-		local connection = self._listeners[index]
+		local connection = listeners[index]
 		if connection ~= nil and connection._connected then
 			if self._debug then
 				self:_logDebug(string.format("-> %s", formatLocation(connection)))
@@ -216,6 +257,7 @@ end
 
 function Signal:_removeConnection(connection: ConnectionType)
 	if self._isFiring then
+		-- Removing in-place while iterating is expensive and bug-prone; compact after fire finishes.
 		self._pendingCompaction = true
 		self._listenerCount = math.max(0, self._listenerCount - 1)
 		self:_warnThresholdIfNeeded()
@@ -316,6 +358,10 @@ function Signal:Fire(...)
 	local packedArgs = table.pack(...)
 	self._hasLastFire = true
 	self._lastArgs = packedArgs
+
+	if self._listenerCount == 0 and #self._middleware == 0 then
+		return
+	end
 
 	if #self._middleware == 0 then
 		self:_dispatchListeners(packedArgs)

@@ -10,37 +10,14 @@ export type Connection = typeof(setmetatable({} :: {
 	_connected: boolean,
 	_once: boolean,
 	_id: number,
-	_tags: { [string]: boolean },
-	_tagList: { string },
-	_autoDisconnectConnections: { RBXScriptConnection },
+	_tags: { [string]: boolean }?,
+	_tagList: { string }?,
+	_autoDisconnectConnections: { RBXScriptConnection }?,
 	_source: string?,
 	_line: number?,
 }, Connection))
 
-local function resolveDebugLocation(fn: (...any) -> ()): (string?, number?)
-	local source: string? = nil
-	local line: number? = nil
-
-	local okSource, sourceResult = pcall(function()
-		return debug.info(fn, "s")
-	end)
-	if okSource and type(sourceResult) == "string" then
-		source = sourceResult
-	end
-
-	local okLine, lineResult = pcall(function()
-		return debug.info(fn, "l")
-	end)
-	if okLine and type(lineResult) == "number" then
-		line = lineResult
-	end
-
-	return source, line
-end
-
 function Connection.new(signal: any, fn: (...any) -> (), priority: number, once: boolean, id: number): Connection
-	local source, line = resolveDebugLocation(fn)
-
 	local self = setmetatable({
 		_signal = signal,
 		_fn = fn,
@@ -48,11 +25,11 @@ function Connection.new(signal: any, fn: (...any) -> (), priority: number, once:
 		_connected = true,
 		_once = once,
 		_id = id,
-		_tags = {},
-		_tagList = {},
-		_autoDisconnectConnections = {},
-		_source = source,
-		_line = line,
+		_tags = nil,
+		_tagList = nil,
+		_autoDisconnectConnections = nil,
+		_source = nil,
+		_line = nil,
 	}, Connection)
 
 	return self
@@ -67,39 +44,63 @@ function Connection:GetPriority(): number
 end
 
 function Connection:GetTag(): string?
-	return self._tagList[1]
+	local tagList = self._tagList
+	if tagList == nil then
+		return nil
+	end
+	return tagList[1]
 end
 
 function Connection:GetTags(): { string }
-	local result = table.create(#self._tagList)
-	for i, tag in ipairs(self._tagList) do
+	local tagList = self._tagList
+	if tagList == nil then
+		return {}
+	end
+
+	local result = table.create(#tagList)
+	for i, tag in ipairs(tagList) do
 		result[i] = tag
 	end
 	return result
 end
 
 function Connection:HasTag(tag: string): boolean
-	return self._tags[tag] == true
+	local tags = self._tags
+	return tags ~= nil and tags[tag] == true
 end
 
 function Connection:Tag(tag: string): Connection
 	assert(type(tag) == "string" and tag ~= "", "Connection:Tag(tag) expects a non-empty string")
 
-	if not self._tags[tag] then
-		self._tags[tag] = true
-		table.insert(self._tagList, tag)
+	local tags = self._tags
+	local tagList = self._tagList
+	if tags == nil then
+		tags = {}
+		tagList = {}
+		self._tags = tags
+		self._tagList = tagList
+	end
+
+	if not tags[tag] then
+		tags[tag] = true
+		table.insert(tagList :: { string }, tag)
 	end
 
 	return self
 end
 
 local function disconnectAutoConnections(self: Connection)
-	for _, rbxsConnection in ipairs(self._autoDisconnectConnections) do
+	local autoConnections = self._autoDisconnectConnections
+	if autoConnections == nil then
+		return
+	end
+
+	for _, rbxsConnection in ipairs(autoConnections) do
 		if rbxsConnection.Connected then
 			rbxsConnection:Disconnect()
 		end
 	end
-	table.clear(self._autoDisconnectConnections)
+	table.clear(autoConnections)
 end
 
 function Connection:AutoDisconnect(instance: Instance): Connection
@@ -123,14 +124,27 @@ function Connection:AutoDisconnect(instance: Instance): Connection
 		end)
 	end
 
-	table.insert(self._autoDisconnectConnections, autoConnection)
+	local autoConnections = self._autoDisconnectConnections
+	if autoConnections == nil then
+		autoConnections = {}
+		self._autoDisconnectConnections = autoConnections
+	end
+	table.insert(autoConnections, autoConnection)
 	return self
 end
 
 function Connection:_cleanup()
 	disconnectAutoConnections(self)
-	table.clear(self._tags)
-	table.clear(self._tagList)
+
+	local tags = self._tags
+	if tags ~= nil then
+		table.clear(tags)
+	end
+
+	local tagList = self._tagList
+	if tagList ~= nil then
+		table.clear(tagList)
+	end
 end
 
 function Connection:Disconnect()
