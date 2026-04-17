@@ -42,7 +42,7 @@ Install with Wally:
 
 ```toml
 [dependencies]
-SignalX = "signalx/signalx@0.1.0"
+SignalX = "nsawill1405/signalx@0.1.0"
 ```
 
 Then run:
