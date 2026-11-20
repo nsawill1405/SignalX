@@ -1,6 +1,18 @@
-![SignalX Logo](logo.png)
+<div align="center">
 
-# SignalX
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f2027,50:203a43,100:2c5364&height=170&section=header&text=SignalX&fontSize=52&fontColor=ffffff&fontAlignY=36&desc=Memory-safe%20events%20and%20messaging%20for%20Roblox&descAlignY=58&descSize=16" alt="SignalX" width="100%" />
+
+<img src="logo.png" alt="SignalX logo" width="140" />
+
+<p>
+  <img src="https://img.shields.io/badge/Luau-00A2FF?style=for-the-badge&logo=roblox&logoColor=white" alt="Luau" />
+  <a href="https://wally.run/package/nsawill1405/signalx"><img src="https://img.shields.io/badge/Wally-nsawill1405%2Fsignalx-AD4646?style=for-the-badge" alt="Wally" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2c5364?style=for-the-badge" alt="License" /></a>
+</p>
+
+<p><a href="#overview">Overview</a> · <a href="#features">Features</a> · <a href="#installation">Installation</a> · <a href="#examples">Examples</a> · <a href="#benchmarks">Benchmarks</a> · <a href="#why-signalx">Why SignalX?</a></p>
+
+</div>
 
 SignalX is an advanced event and messaging system for Roblox focused on developer experience, memory safety, and production debugging.
 
@@ -274,3 +286,17 @@ The stress test covers:
 - 1000+ listeners
 - Rapid fire loop
 - Listener cleanup validation
+
+## License
+
+[MIT](LICENSE) © William North. Issues and pull requests are welcome.
+
+---
+
+<div align="center">
+
+<sub>Made by <a href="https://github.com/nsawill1405">William North</a> · <a href="https://nsawill.co.uk">nsawill.co.uk</a></sub>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:2c5364,50:203a43,100:0f2027&height=100&section=footer" alt="" width="100%" />
+
+</div>
